@@ -1,3 +1,3 @@
-# Library template
+# Image saver
 
-Шаблон для библиотеки LUNA
+Загрузчик картинок для сервера
