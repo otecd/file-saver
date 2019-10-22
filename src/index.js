@@ -7,17 +7,13 @@ import { IncomingForm } from 'formidable'
 import sharp from 'sharp'
 import RichError from 'luna-rich-error'
 
-const codes = {
-  UNSUPPORTED_IMAGE_TYPE: 'UNSUPPORTED_IMAGE_TYPE',
-  REACHED_IMAGES_LIMIT: 'REACHED_IMAGES_LIMIT'
-}
 const download = (url, dest) => new Promise((resolve, reject) => {
   const extension = url.split('.')
     .pop()
     .split('?')[0]
 
   if (!['jpg', 'png'].includes(extension)) {
-    return reject(new RichError('Unsupported image format. Please, upload only JPG, PNG file.', 415, codes.UNSUPPORTED_IMAGE_TYPE))
+    return reject(new RichError('Unsupported image format. Please, upload only JPG, PNG file.', 415, RichError.codes.UNSUPPORTED_IMAGE_TYPE))
   }
   return wget(
     { url, dest, timeout: 10000 },
@@ -62,7 +58,7 @@ export default class ImageSaver {
 
         form.on('file', (_, file) => {
           if (file.name === 'temp.jpg' && onlyReplacement) {
-            return reject(new RichError('Images limit is reached', 416, codes.REACHED_IMAGES_LIMIT))
+            return reject(new RichError('Images limit is reached', 416, RichError.codes.REACHED_IMAGES_LIMIT))
           }
 
           const oldFileName = file.name !== 'temp.jpg' && file.name
