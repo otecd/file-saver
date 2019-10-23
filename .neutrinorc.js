@@ -4,7 +4,7 @@ module.exports = {
     [
       '@neutrinojs/library',
       {
-        name: 'luna-library-template',
+        name: 'luna-image-saver',
         target: 'node',
         libraryTarget: 'commonjs2',
         babel: {
