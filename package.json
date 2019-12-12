@@ -1,5 +1,5 @@
 {
-  "name": "luna-image-saver",
+  "name": "@noname.team/image-saver",
   "version": "1.1.2",
   "description": "An image downloader",
   "main": "build/index.js",
@@ -7,7 +7,7 @@
     "build"
   ],
   "publishConfig": {
-    "registry": "https://packages.lunaapps.ru"
+    "access": "public"
   },
   "scripts": {
     "build": "neutrino build",
@@ -26,9 +26,9 @@
     "neutrino": "^8.3.0"
   },
   "dependencies": {
+    "@noname.team/rich-error": "^1.2.3",
     "formidable": "^1.2.1",
     "jpeg-autorotate": "^5.0.2",
-    "luna-rich-error": "^1.1.0",
     "node-wget": "^0.4.3",
     "sharp": "^0.23.1",
     "uuid": "^3.3.3"
