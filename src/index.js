@@ -5,7 +5,7 @@ import wget from 'node-wget'
 import jo from 'jpeg-autorotate'
 import { IncomingForm } from 'formidable'
 import sharp from 'sharp'
-import RichError from 'luna-rich-error'
+import RichError from '@noname.team/rich-error'
 
 const download = (url, dest) => new Promise((resolve, reject) => {
   const extension = url.split('.')
