@@ -4,8 +4,7 @@ import uuidv4 from 'uuid/v4'
 import wget from 'wget-improved'
 import jo from 'jpeg-autorotate'
 import { IncomingForm } from 'formidable'
-import sharp from 'sharp'
-import { HttpError } from '@noname.team/errors'
+import { HttpError, RichError } from '@noname.team/errors'
 
 const download = ({
   url,
@@ -42,34 +41,30 @@ export default class ImageSaver {
    */
   constructor ({ targetDir, onlyReplacement } = {}) {
     /**
-     * @property {string} targetDir
+     * @type {Object}
+     * @property {string} target.dir
+     * @property {string} target.path
      */
-    this.targetDir = targetDir
-    /**
-     * @property {boolean} onlyReplacement
-     */
+    this.target = {
+      dir: targetDir,
+      path: ''
+    }
+    /** @property {boolean} */
     this.onlyReplacement = onlyReplacement
-    /**
-     * @property {?Object} sharp
-     */
-    this.sharp = null
+
     this.download = this.download.bind(this)
+    this.process = this.process.bind(this)
   }
 
   /**
-   * This method is a step 1 of image saving.
+   * This method is a firstable step of image saving.
    * @param {Object} config - input configuration.
    * @param {!(string|Object)} config.source - image source. String means that this is URL or you can provide an Object that is for Http Request instance
    * @param {?string} [config.targetFileName=`${uuidv4()}.jpg`] - is output file name.
-   * @param {?boolean} config.skipProcessing - if you want to skip sharp initializing and you just need the file
-   * @return {Promise<?Object, HttpError>} - return a Sharp object which you can handle in your way. Throw HttpError with a code 416 when this.onlyReplacement, but you are going to download a new file.
+   * @return {Promise<Object, HttpError>} - return a current instance. Throw HttpError with a code 416 when this.onlyReplacement, but you are going to download a new file.
    */
-  async download ({
-    source,
-    targetFileName = `${uuidv4()}.jpg`,
-    skipProcessing
-  }) {
-    const targetPath = path.join(this.targetDir, targetFileName)
+  async download ({ source, targetFileName = `${uuidv4()}.jpg` }) {
+    this.target.path = path.join(this.target.dir, targetFileName)
 
     switch (typeof source) {
       case 'string': {
@@ -78,28 +73,28 @@ export default class ImageSaver {
           .split('?')[0]
 
         if (this.onlyReplacement && sourceFileName !== targetFileName) {
-          throw new HttpError(416)
+          throw new RichError('Images limit is reached', 'ERROR_IMAGES_LIMIT_REACHED')
         }
 
-        await download({ url: source, to: targetPath })
+        await download({ url: source, to: this.target.path })
         break
       }
       default: {
         await new Promise((resolve, reject) => {
-          const form = new IncomingForm({ uploadDir: this.targetDir, keepExtensions: true })
+          const form = new IncomingForm({ uploadDir: this.target.dir, keepExtensions: true })
 
           form.on('file', async (_, file) => {
             let joResult
 
             if (this.onlyReplacement && file.name !== targetFileName) {
-              return reject(new HttpError(416))
+              return reject(new RichError('Images limit is reached', 'ERROR_IMAGES_LIMIT_REACHED'))
             }
 
             try {
               joResult = await jo.rotate(file.path)
-              fs.writeFileSync(targetPath, joResult.buffer)
+              fs.writeFileSync(this.target.path, joResult.buffer)
             } catch (error) {
-              fs.renameSync(file.path, targetPath)
+              fs.renameSync(file.path, this.target.path)
             }
             resolve()
           })
@@ -110,8 +105,28 @@ export default class ImageSaver {
       }
     }
 
-    this.sharp = skipProcessing ? null : sharp(targetPath)
-
     return this
+  }
+
+  /**
+   * This method is optional step for image processing.
+   * @param {Object} transformer - sharp operations.
+   * @return {Promise<Object, HttpError>} - return a current instance. Throw errors when file system troubles.
+   */
+  process (transformer) {
+    return new Promise((resolve, reject) => {
+      const readStream = fs.createReadStream(this.target.path)
+
+      readStream.on('open', () => {
+        const writeStream = fs.createWriteStream(this.target.path)
+
+        writeStream.on('error', reject)
+        writeStream.on('finish', () => resolve(this))
+        readStream
+          .pipe(transformer)
+          .pipe(writeStream)
+      })
+      readStream.on('error', reject)
+    })
   }
 }

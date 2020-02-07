@@ -33,7 +33,6 @@
     "@noname.team/errors": "^1.1.0",
     "formidable": "^1.2.1",
     "jpeg-autorotate": "^5.0.2",
-    "sharp": "^0.23.1",
     "uuid": "^3.3.3",
     "wget-improved": "^3.0.2"
   },
