@@ -73,7 +73,7 @@ export default class ImageSaver {
           .split('?')[0]
 
         if (this.onlyReplacement && sourceFileName !== targetFileName) {
-          throw new RichError('Images limit is reached', 'ERROR_IMAGES_LIMIT_REACHED')
+          throw new RichError('Images limit is reached', 'ERR_IMAGES_LIMIT_REACHED')
         }
 
         await download({ url: source, to: this.target.path })
@@ -87,7 +87,7 @@ export default class ImageSaver {
             let joResult
 
             if (this.onlyReplacement && file.name !== targetFileName) {
-              return reject(new RichError('Images limit is reached', 'ERROR_IMAGES_LIMIT_REACHED'))
+              return reject(new RichError('Images limit is reached', 'ERR_IMAGES_LIMIT_REACHED'))
             }
 
             try {
