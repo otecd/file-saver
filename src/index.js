@@ -9,6 +9,16 @@ import { IncomingForm } from 'formidable'
 import { RichError } from '@noname.team/errors'
 import { error_codes as errorCodes } from './const.json'
 
+/**
+ * Download a file by URL
+ * @param {Object} params
+ * @param {!string} params.url - is source URL
+ * @param {!string} params.to - is target path
+ * @param {?Function} [params.onStart] - helper method that is firing on start of downloading
+ * @param {?Function} [params.onProgress] - helper method that is firing multiple times while downloading
+ * @param {?Object} [params.wgetOptions] - wget-improved options
+ * @return {Promise<Object, RichError>} - resolves when everything is ok. Reject errors if image source is broken or if image can't be loaded
+ */
 const download = ({
   url,
   to,
@@ -30,6 +40,12 @@ const download = ({
     .on('progress', onProgress)
     .on('end', resolve)
 })
+
+/**
+ * Validate a file as exactly image file
+ * @param {!string} imagePath - is image path
+ * @return {Promise<Object, RichError>} - resolves when everything is ok. Reject error if image source is broken
+ */
 const validateImageFile = async (imagePath) => {
   let buffer
 
