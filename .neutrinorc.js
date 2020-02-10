@@ -1,10 +1,12 @@
 const library = require('@neutrinojs/library')
+const mocha = require('@neutrinojs/mocha')
 
 module.exports = {
   use: [
     library({
       name: 'ImageSaver'
     }),
+    mocha(),
     (neutrino) => {
       if (process.env.NODE_ENV === 'production') {
         neutrino.config.optimization

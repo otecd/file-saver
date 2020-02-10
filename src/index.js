@@ -1,5 +1,6 @@
 import path from 'path'
 import fs from 'fs'
+import { IncomingMessage } from 'http'
 import uuidv4 from 'uuid/v4'
 import wget from 'wget-improved'
 import jo from 'jpeg-autorotate'
@@ -10,7 +11,6 @@ import { error_codes as errorCodes } from './const.json'
 const download = ({
   url,
   to,
-  extensions = ['jpg', 'png'],
   onStart = fileSize => fileSize,
   onProgress = progress => progress,
   wgetOptions = {}
@@ -23,14 +23,7 @@ const download = ({
     return reject(new RichError(error.message || 'Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN))
   }
 
-  const extension = urlParsed.pathname.split('.')
-    .pop()
-
-  if (!extensions.includes(extension)) {
-    return reject(new RichError('Unsupported image format', errorCodes.ERR_IMAGE_FORMAT_UNSUPPORTED))
-  }
-
-  wget.download(url, to, wgetOptions)
+  wget.download(urlParsed.href, to, wgetOptions)
     .on('error', (error) => reject(new RichError(error.message || 'Image can not be loaded', errorCodes.ERR_IMAGE_CAN_NOT_BE_LOADED)))
     .on('start', onStart)
     .on('progress', onProgress)
@@ -44,14 +37,12 @@ export default class ImageSaver {
   /**
    * @param {Object} config - input configuration.
    * @param {!string} config.targetDir - is output system directory.
-   * @param {?boolean} [config.onlyReplacement] - in case if you don't want to create a new file, e.g. limit case.
-   * @param {?Array<string>} [config.validExtensions] - acceptable image extensions.
+   * @param {?Array<string>} [config.validExtensions=['jpg', 'png']] - acceptable image extensions.
    * @return {Object} - an instance.
    */
   constructor ({
     targetDir,
-    onlyReplacement,
-    validExtensions
+    validExtensions = ['jpg', 'png']
   } = {}) {
     /**
      * @type {Object}
@@ -65,8 +56,6 @@ export default class ImageSaver {
       fileName: null
     }
     /** @property {boolean} */
-    this.onlyReplacement = onlyReplacement
-    /** @property {boolean} */
     this.validExtensions = validExtensions
 
     this.download = this.download.bind(this)
@@ -76,54 +65,69 @@ export default class ImageSaver {
   /**
    * This method is a firstable step of image saving.
    * @param {!(string|Object)} source - image source. String means that this is URL or you can provide an Object that is for Http Request instance
-   * @param {?string} [targetFileName=`${uuidv4()}.jpg`] - is output file name.
-   * @return {Promise<Object, Error>} - return a current instance. Throw an Error when this.onlyReplacement, and you are going to download a new file.
+   * @param {?string} [targetName=uuidv4()] - is output file name w/o extension.
+   * @return {Promise<Object, Error>} - return a current instance.
+   * @todo support multiple files by a single call
    */
-  async download (source, targetFileName = `${uuidv4()}.jpg`) {
-    this.target.fileName = targetFileName
-    this.target.path = path.join(this.target.dir, this.target.fileName)
+  async download (source, targetName = uuidv4()) {
+    if (typeof source === 'string') {
+      let urlParsed
 
-    switch (typeof source) {
-      case 'string': {
-        const sourceFileName = source.split('/')
-          .pop()
-          .split('?')[0]
-
-        if (this.onlyReplacement && sourceFileName !== this.target.fileName) {
-          throw new RichError('Images limit is reached', errorCodes.ERR_IMAGES_LIMIT_REACHED)
-        }
-
-        await download({
-          url: source,
-          to: this.target.path,
-          extensions: this.validExtensions
-        })
-        break
+      try {
+        urlParsed = new URL(source)
+      } catch (error) {
+        throw new RichError(error.message || 'Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN)
       }
-      default: {
-        await new Promise((resolve, reject) => {
-          const form = new IncomingForm({ uploadDir: this.target.dir, keepExtensions: true })
 
-          form.on('file', async (_, file) => {
-            let joResult
+      const sourceFileName = urlParsed.pathname.split('/')
+        .pop()
+      const extension = sourceFileName.split('.')
+        .pop()
 
-            if (this.onlyReplacement && file.name !== this.target.fileName) {
-              return reject(new RichError('Images limit is reached', errorCodes.ERR_IMAGES_LIMIT_REACHED))
-            }
-
-            try {
-              joResult = await jo.rotate(file.path)
-              fs.writeFileSync(this.target.path, joResult.buffer)
-            } catch (error) {
-              fs.renameSync(file.path, this.target.path)
-            }
-            resolve()
-          })
-          form.on('error', reject)
-          form.parse(source)
-        })
-        break
+      if (!this.validExtensions.includes(extension)) {
+        throw new RichError('Unsupported image format', errorCodes.ERR_IMAGE_FORMAT_UNSUPPORTED)
       }
+
+      this.target.fileName = `${targetName}.${extension}`
+      this.target.path = path.join(this.target.dir, this.target.fileName)
+
+      await download({
+        url: source,
+        to: this.target.path
+      })
+    } else if (source instanceof IncomingMessage) {
+      await new Promise((resolve, reject) => {
+        const form = new IncomingForm({ uploadDir: this.target.dir, keepExtensions: true })
+
+        form.on('file', async (_, file) => {
+          let joResult
+          const extension = file.name.split('.')
+            .pop()
+
+          if (!this.validExtensions.includes(extension)) {
+            return reject(new RichError('Unsupported image format', errorCodes.ERR_IMAGE_FORMAT_UNSUPPORTED))
+          }
+
+          this.target.fileName = `${targetName}.${extension}`
+          this.target.path = path.join(this.target.dir, this.target.fileName)
+
+          try {
+            joResult = await jo.rotate(file.path, { quality: 100 })
+            fs.writeFileSync(this.target.path, joResult.buffer)
+          } catch (error) {
+            fs.renameSync(file.path, this.target.path)
+          }
+
+          return resolve()
+        })
+        form.parse(source, (error, fields, files) => {
+          if (error || !Object.keys(files).length) {
+            reject(new RichError('Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN))
+          }
+        })
+      })
+    } else {
+      throw new RichError('Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN)
     }
 
     return this
