@@ -4,6 +4,7 @@ import { IncomingMessage } from 'http'
 import uuidv4 from 'uuid/v4'
 import wget from 'wget-improved'
 import jo from 'jpeg-autorotate'
+import sharp from 'sharp'
 import { IncomingForm } from 'formidable'
 import { RichError } from '@noname.team/errors'
 import { error_codes as errorCodes } from './const.json'
@@ -29,6 +30,16 @@ const download = ({
     .on('progress', onProgress)
     .on('end', resolve)
 })
+const validateImageFile = async (imagePath) => {
+  let buffer
+
+  try {
+    buffer = await sharp(imagePath).toBuffer()
+    return fs.writeFileSync(imagePath, buffer)
+  } catch (error) {
+    throw new RichError('Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN)
+  }
+}
 
 /**
  * ImageSaver class. Use it for image downloading, processing and storing wherever you want.
@@ -40,10 +51,7 @@ export default class ImageSaver {
    * @param {?Array<string>} [config.validExtensions=['jpg', 'png']] - acceptable image extensions.
    * @return {Object} - an instance.
    */
-  constructor ({
-    targetDir,
-    validExtensions = ['jpg', 'png']
-  } = {}) {
+  constructor ({ targetDir, validExtensions = ['jpg', 'png'] } = {}) {
     /**
      * @type {Object}
      * @property {string} target.dir
@@ -93,6 +101,7 @@ export default class ImageSaver {
 
       try {
         await download({ url: source, to: this.target.path })
+        await validateImageFile(this.target.path)
       } catch (error) {
         try {
           fs.unlinkSync(this.target.path)
@@ -126,7 +135,11 @@ export default class ImageSaver {
           } catch (error) {
             fs.renameSync(file.path, this.target.path)
           }
-
+          try {
+            await validateImageFile(this.target.path)
+          } catch (error) {
+            reject(error)
+          }
           return resolve()
         })
         form.parse(source, (error, fields, files) => {
