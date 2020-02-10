@@ -91,10 +91,15 @@ export default class ImageSaver {
       this.target.fileName = `${targetName}.${extension}`
       this.target.path = path.join(this.target.dir, this.target.fileName)
 
-      await download({
-        url: source,
-        to: this.target.path
-      })
+      try {
+        await download({ url: source, to: this.target.path })
+      } catch (error) {
+        try {
+          fs.unlinkSync(this.target.path)
+        } catch (errorUnlink) {
+        }
+        throw error
+      }
     } else if (source instanceof IncomingMessage) {
       await new Promise((resolve, reject) => {
         const form = new IncomingForm({ uploadDir: this.target.dir, keepExtensions: true })
@@ -105,6 +110,10 @@ export default class ImageSaver {
             .pop()
 
           if (!this.validExtensions.includes(extension)) {
+            try {
+              fs.unlinkSync(file.path)
+            } catch (errorUnlink) {
+            }
             return reject(new RichError('Unsupported image format', errorCodes.ERR_IMAGE_FORMAT_UNSUPPORTED))
           }
 

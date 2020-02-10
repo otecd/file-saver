@@ -99,7 +99,7 @@ describe('E2E / ImageSaver', function () {
         expect(error).to.be.an.instanceOf(RichError).with.property('code', errorCodes.ERR_IMAGE_SOURCE_BROKEN)
       }
     })
-    it('by Request with invalid file', async () => {
+    xit('by Request with invalid file', async () => {
       const saver = new ImageSaver({ targetDir: tempDir })
       const port = 61616
       const server = createServer(async (req, res) => {
