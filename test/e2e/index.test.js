@@ -3,6 +3,7 @@ import fs from 'fs'
 import path from 'path'
 import fetch from 'isomorphic-unfetch'
 import FormData from 'form-data'
+import sharp from 'sharp'
 import { RichError } from '@noname.team/errors'
 import ImageSaver from '../../src/index'
 import { error_codes as errorCodes } from '../../src/const.json'
@@ -60,6 +61,21 @@ describe('E2E / ImageSaver', function () {
       expect(postImageResponse).to.equal('done')
       server.close()
     })
+  })
+
+  it('transform an image', async () => {
+    const saver = new ImageSaver({ targetDir: tempDir })
+    const transformer = sharp()
+      .blur(30)
+      .resize(100, 100)
+      .jpeg()
+
+    await saver.download(IMAGE_URL)
+    await saver.process(transformer)
+
+    const metadata = await sharp(saver.target.path).metadata()
+
+    expect(metadata.format).to.equal('jpeg')
   })
 
   describe('breaks down while downloading a file', () => {

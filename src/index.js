@@ -176,20 +176,25 @@ export default class ImageSaver {
    * @param {Object} transformer - sharp operations.
    * @return {Promise<Object, Error>} - return a current instance. Throw errors when file system troubles.
    */
-  process (transformer) {
-    return new Promise((resolve, reject) => {
-      const readStream = fs.createReadStream(this.target.path)
+  async process (transformer) {
+    const readStream = fs.createReadStream(this.target.path)
+    const image = await readStream.pipe(transformer)
 
-      readStream.on('open', () => {
-        const writeStream = fs.createWriteStream(this.target.path)
+    fs.writeFileSync(this.target.path, await image.toBuffer())
 
-        writeStream.on('error', reject)
-        writeStream.on('finish', () => resolve(this))
-        readStream
-          .pipe(transformer)
-          .pipe(writeStream)
-      })
-      readStream.on('error', reject)
-    })
+    const metadata = await sharp(this.target.path).metadata()
+    const [name, originalExtension] = this.target.fileName.split('.')
+    const originalFormat = originalExtension === 'jpg' ? 'jpeg' : originalExtension
+
+    if (originalFormat !== metadata.format) {
+      const oldPath = this.target.path
+      const extension = metadata.format === 'jpeg' ? 'jpg' : metadata.format
+
+      this.target.fileName = `${name}.${extension}`
+      this.target.path = path.join(this.target.dir, this.target.fileName)
+      fs.renameSync(oldPath, this.target.path)
+    }
+
+    return this
   }
 }
