@@ -2,64 +2,16 @@ import path from 'path'
 import fs from 'fs'
 import { IncomingMessage } from 'http'
 import uuidv4 from 'uuid/v4'
-import wget from 'wget-improved'
 import jo from 'jpeg-autorotate'
 import sharp from 'sharp'
 import textToPicture from 'text-to-picture'
 import { IncomingForm } from 'formidable'
 import { RichError } from '@noname.team/errors'
+import { downloadFileByURL, validateImageFile } from '@noname.team/helpers/for/server'
 import { error_codes as errorCodes } from './const.json'
 
 /**
- * Download a file by URL
- * @param {Object} params
- * @param {!String} params.url - is source URL
- * @param {!String} params.to - is target path
- * @param {?Function} [params.onStart] - helper method that is firing on start of downloading
- * @param {?Function} [params.onProgress] - helper method that is firing multiple times while downloading
- * @param {?Object} [params.wgetOptions] - wget-improved options
- * @return {Promise<Object, RichError>} - resolves when everything is ok. Reject errors if image source is broken or if image can't be loaded
- */
-const download = ({
-  url,
-  to,
-  onStart = fileSize => fileSize,
-  onProgress = progress => progress,
-  wgetOptions = {}
-}) => new Promise((resolve, reject) => {
-  let urlParsed
-
-  try {
-    urlParsed = new URL(url)
-  } catch (error) {
-    return reject(new RichError(error.message || 'Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN))
-  }
-
-  wget.download(urlParsed.href, to, wgetOptions)
-    .on('error', (error) => reject(new RichError(error.message || 'Image can not be loaded', errorCodes.ERR_IMAGE_CAN_NOT_BE_LOADED)))
-    .on('start', onStart)
-    .on('progress', onProgress)
-    .on('end', resolve)
-})
-
-/**
- * Validate a file as exactly image file
- * @param {!String} imagePath - is image path
- * @return {Promise<Object, RichError>} - resolves when everything is ok. Reject error if image source is broken
- */
-const validateImageFile = async (imagePath) => {
-  let buffer
-
-  try {
-    buffer = await sharp(imagePath).toBuffer()
-    return fs.writeFileSync(imagePath, buffer)
-  } catch (error) {
-    throw new RichError('Image source is broken', errorCodes.ERR_IMAGE_SOURCE_BROKEN)
-  }
-}
-
-/**
- * ImageSaver class. Use it for image downloading, processing and storing wherever you want.
+ * ImageSaver class. Use it for images downloading, processing and storing wherever you want.
  */
 export default class ImageSaver {
   /**
@@ -117,7 +69,7 @@ export default class ImageSaver {
       this.target.path = path.join(this.target.dir, this.target.fileName)
 
       try {
-        await download({ url: source, to: this.target.path })
+        await downloadFileByURL({ url: source, to: this.target.path })
         await validateImageFile(this.target.path)
       } catch (error) {
         try {

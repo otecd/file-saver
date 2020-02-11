@@ -18,7 +18,7 @@ describe('E2E / ImageSaver', function () {
   const tempDir = path.join(__dirname, `./temp${Date.now()}`)
   let imageFilePath
 
-  this.timeout(10000)
+  this.timeout(20000)
   before(() => {
     if (fs.existsSync(tempDir)) {
       fs.rmdirSync(tempDir, { recursive: true })
@@ -85,7 +85,7 @@ describe('E2E / ImageSaver', function () {
       try {
         await saver.download(IMAGE_URL_INACCESSIBLE)
       } catch (error) {
-        expect(error).to.be.an.instanceOf(RichError).with.property('code', errorCodes.ERR_IMAGE_CAN_NOT_BE_LOADED)
+        expect(error).to.be.an.instanceOf(RichError).with.property('code', 'ERR_FILE_CAN_NOT_BE_LOADED')
       }
     })
     it('from invalid URL string', async () => {
