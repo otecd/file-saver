@@ -5,6 +5,7 @@ import uuidv4 from 'uuid/v4'
 import wget from 'wget-improved'
 import jo from 'jpeg-autorotate'
 import sharp from 'sharp'
+import textToPicture from 'text-to-picture'
 import { IncomingForm } from 'formidable'
 import { RichError } from '@noname.team/errors'
 import { error_codes as errorCodes } from './const.json'
@@ -12,8 +13,8 @@ import { error_codes as errorCodes } from './const.json'
 /**
  * Download a file by URL
  * @param {Object} params
- * @param {!string} params.url - is source URL
- * @param {!string} params.to - is target path
+ * @param {!String} params.url - is source URL
+ * @param {!String} params.to - is target path
  * @param {?Function} [params.onStart] - helper method that is firing on start of downloading
  * @param {?Function} [params.onProgress] - helper method that is firing multiple times while downloading
  * @param {?Object} [params.wgetOptions] - wget-improved options
@@ -43,7 +44,7 @@ const download = ({
 
 /**
  * Validate a file as exactly image file
- * @param {!string} imagePath - is image path
+ * @param {!String} imagePath - is image path
  * @return {Promise<Object, RichError>} - resolves when everything is ok. Reject error if image source is broken
  */
 const validateImageFile = async (imagePath) => {
@@ -63,16 +64,16 @@ const validateImageFile = async (imagePath) => {
 export default class ImageSaver {
   /**
    * @param {Object} config - input configuration.
-   * @param {!string} config.targetDir - is output system directory.
-   * @param {?Array<string>} [config.validExtensions=['jpg', 'png']] - acceptable image extensions.
+   * @param {!String} config.targetDir - is output system directory.
+   * @param {?Array<String>} [config.validExtensions=['jpg', 'png']] - acceptable image extensions.
    * @return {Object} - an instance.
    */
   constructor ({ targetDir, validExtensions = ['jpg', 'png'] } = {}) {
     /**
      * @type {Object}
-     * @property {string} target.dir
-     * @property {string} target.path
-     * @property {string} target.fileName
+     * @property {String} target.dir
+     * @property {String} target.path
+     * @property {String} target.fileName
      */
     this.target = {
       dir: targetDir,
@@ -88,8 +89,8 @@ export default class ImageSaver {
 
   /**
    * This method is a firstable step of image saving.
-   * @param {!(string|Object)} source - image source. String means that this is URL or you can provide an Object that is for Http Request instance
-   * @param {?string} [targetName=uuidv4()] - is output file name w/o extension.
+   * @param {!(String|Object)} source - image source. String means that this is URL or you can provide an Object that is for Http Request instance
+   * @param {?String} [targetName=uuidv4()] - is output file name w/o extension.
    * @return {Promise<Object, Error>} - return a current instance.
    * @todo support multiple files by a single call
    */
@@ -173,14 +174,17 @@ export default class ImageSaver {
 
   /**
    * This method is optional step for image processing.
-   * @param {Object} transformer - sharp operations.
+   * @param {Object} config
+   * @param {Object} config.transformer - sharp operations.
+   * @param {?Array<Object>} config.textOverlays - objects of text-to-picture pkg
    * @return {Promise<Object, Error>} - return a current instance. Throw errors when file system troubles.
    */
-  async process (transformer) {
+  async process ({ transformer, textOverlays }) {
     const readStream = fs.createReadStream(this.target.path)
     const image = await readStream.pipe(transformer)
+    const buffer = await image.toBuffer()
 
-    fs.writeFileSync(this.target.path, await image.toBuffer())
+    fs.writeFileSync(this.target.path, buffer)
 
     const metadata = await sharp(this.target.path).metadata()
     const [name, originalExtension] = this.target.fileName.split('.')
@@ -193,6 +197,19 @@ export default class ImageSaver {
       this.target.fileName = `${name}.${extension}`
       this.target.path = path.join(this.target.dir, this.target.fileName)
       fs.renameSync(oldPath, this.target.path)
+    }
+
+    if (Array.isArray(textOverlays)) {
+      const overlaysBuffers = await Promise.all(textOverlays.map(async (t) => {
+        const result = await textToPicture.convert(t)
+
+        return result.getBuffer()
+      }))
+      const bufferWithOverlays = await sharp(this.target.path)
+        .composite(overlaysBuffers.map((input) => ({ input })))
+        .toBuffer()
+
+      fs.writeFileSync(this.target.path, bufferWithOverlays)
     }
 
     return this

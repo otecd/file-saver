@@ -67,11 +67,11 @@ describe('E2E / ImageSaver', function () {
     const saver = new ImageSaver({ targetDir: tempDir })
     const transformer = sharp()
       .blur(30)
-      .resize(100, 100)
+      .resize(400, 400)
       .jpeg()
 
     await saver.download(IMAGE_URL)
-    await saver.process(transformer)
+    await saver.process({ transformer, textOverlays: [{ text: 'TEST' }] })
 
     const metadata = await sharp(saver.target.path).metadata()
 
