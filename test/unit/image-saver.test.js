@@ -1,6 +1,6 @@
-import ImageSaver from '../../src/index'
+import ImageSaver from '../../src/image-saver'
 
-describe('Unit / index', () => {
+describe('Unit / image-saver', () => {
   it('exports the ImageSaver class by default', () => {
     const saver = new ImageSaver({ targetDir: './' })
 
