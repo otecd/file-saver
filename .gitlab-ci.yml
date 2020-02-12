@@ -25,7 +25,7 @@ production:
     - npm run build
     - export NPM_TOKEN="9f2403c7-6ed2-4af1-a276-05abfbeb8963"
     - touch ".npmrc"
-    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> "/builds/noname.team/libraries/image-saver/.npmrc"
+    - echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" >> "/builds/noname.team/libraries/file-saver/.npmrc"
     - npm publish --access public
   only:
     - master

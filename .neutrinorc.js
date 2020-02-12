@@ -4,7 +4,7 @@ const mocha = require('@neutrinojs/mocha')
 module.exports = {
   use: [
     library({
-      name: 'ImageSaver'
+      name: 'FileSaver'
     }),
     mocha(),
     (neutrino) => {
