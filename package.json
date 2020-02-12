@@ -1,6 +1,6 @@
 {
   "name": "@noname.team/file-saver",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "A file saver",
   "main": "build/index.js",
   "files": [
