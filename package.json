@@ -1,7 +1,7 @@
 {
-  "name": "@noname.team/image-saver",
-  "version": "1.2.0",
-  "description": "An image processer and downloader",
+  "name": "@noname.team/file-saver",
+  "version": "1.0.0",
+  "description": "A file saver",
   "main": "build/index.js",
   "files": [
     "build"
