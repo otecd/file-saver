@@ -67,6 +67,8 @@ export default class ImageSaver extends FileSaver {
     transformer,
     textOverlays
   }) {
+    const textPosition = { x: 100, y: 100 }
+
     if (!fileName || !(transformer || textOverlays)) {
       throw new RichError('Required argument is missed', errorCodes.ERR_REQUIRED_ARGUMENT_MISSED)
     }
@@ -80,6 +82,12 @@ export default class ImageSaver extends FileSaver {
     fs.writeFileSync(targetPath, buffer)
 
     const metadata = await sharp(targetPath).metadata()
+    const convertToPercent = ({ x, y }) => {
+      const widthImg = metadata.width
+      const heightImg = metadata.height
+
+      return { left: (widthImg / 100 * x), top: (heightImg / 100 * y) }
+    }
     const [name, originalExtension] = targetFileName.split('.')
     const originalFormat = originalExtension === 'jpg' ? 'jpeg' : originalExtension
 
@@ -99,7 +107,7 @@ export default class ImageSaver extends FileSaver {
         return result.getBuffer()
       }))
       const bufferWithOverlays = await sharp(targetPath)
-        .composite(overlaysBuffers.map((input) => ({ input })))
+        .composite(overlaysBuffers.map((input) => ({ input, ...convertToPercent(textPosition) })))
         .toBuffer()
 
       fs.writeFileSync(targetPath, bufferWithOverlays)

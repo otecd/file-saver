@@ -23,10 +23,10 @@ describe('E2E / ImageSaver', function () {
     const saver = new ImageSaver({ targetDir })
     const transformer = sharp()
       .blur(30)
-      .resize(400, 400)
+      .resize(1400, 1400)
       .tiff()
     const downloadedFileName = await saver.download(IMAGE_URL)
-    const fileName = await saver.process({ fileName: downloadedFileName, transformer, textOverlays: [{ text: 'TEST' }] })
+    const fileName = await saver.process({ fileName: downloadedFileName, transformer, textOverlays: [{ text: 'test test' }] })
     const filePath = path.join(targetDir, fileName)
     const metadata = await sharp(filePath).metadata()
 
