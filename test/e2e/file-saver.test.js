@@ -1,6 +1,7 @@
 /* eslint-disable no-unused-expressions */
 import fs from 'fs'
 import path from 'path'
+import rimraf from 'rimraf'
 import fetch from 'isomorphic-unfetch'
 import FormData from 'form-data'
 import { RichError } from '@noname.team/errors'
@@ -19,12 +20,12 @@ describe('E2E / FileSaver', function () {
   this.timeout(20000)
   before(() => {
     if (fs.existsSync(targetDir)) {
-      fs.rmdirSync(targetDir, { recursive: true })
+      rimraf.sync(targetDir)
     }
     fs.mkdirSync(targetDir)
   })
   after(() => {
-    fs.rmdirSync(targetDir, { recursive: true })
+    rimraf.sync(targetDir)
   })
 
   describe('downloads a file', () => {

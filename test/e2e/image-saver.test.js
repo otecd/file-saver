@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-expressions */
 import fs from 'fs'
+import rimraf from 'rimraf'
 import path from 'path'
 import sharp from 'sharp'
 import { ImageSaver } from '../../src/index'
@@ -11,12 +12,12 @@ describe('E2E / ImageSaver', function () {
   this.timeout(20000)
   before(() => {
     if (fs.existsSync(targetDir)) {
-      fs.rmdirSync(targetDir, { recursive: true })
+      rimraf.sync(targetDir)
     }
     fs.mkdirSync(targetDir)
   })
   after(() => {
-    fs.rmdirSync(targetDir, { recursive: true })
+    rimraf.sync(targetDir)
   })
 
   it('transform an image', async () => {
@@ -26,7 +27,12 @@ describe('E2E / ImageSaver', function () {
       .resize(1400, 1400)
       .tiff()
     const downloadedFileName = await saver.download(IMAGE_URL)
-    const fileName = await saver.process({ fileName: downloadedFileName, transformer, textOverlays: [{ text: 'test test' }] })
+    const fileName = await saver.process({
+      fileName: downloadedFileName,
+      transformer,
+      textOverlays: [{ text: 'test test' }],
+      textPosition: { x: 55, y: 69 }
+    })
     const filePath = path.join(targetDir, fileName)
     const metadata = await sharp(filePath).metadata()
 
